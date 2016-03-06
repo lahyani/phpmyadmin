@@ -263,7 +263,7 @@ class DbSearch
         $html_output = '';
         // Displays search string
         $html_output .= '<br />'
-            . '<table class="data">'
+            . '<table class="data" style="min-width:400px">'
             . '<caption class="tblHeaders">'
             . sprintf(
                 __('Search results for "<i>%s</i>" %s:'),
@@ -271,9 +271,13 @@ class DbSearch
                 $this->_searchTypeDescription
             )
             . '</caption>';
-
         $num_search_result_total = 0;
-        $odd_row = true;
+        // Store stats about tables with result
+        $rows_with_result ='';
+        $odd_row_with_result = true;
+        // Store tables without any result
+        $rows_without_result ='';
+        $odd_row_without_result = true;
         // For each table selected as search criteria
         foreach ($this->_criteriaTables as $each_table) {
             // Gets the SQL statements
@@ -281,13 +285,45 @@ class DbSearch
             // Executes the "COUNT" statement
             $res_cnt = $GLOBALS['dbi']->fetchValue($newsearchsqls['select_count']);
             $num_search_result_total += $res_cnt;
-            // Gets the result row's HTML for a table
-            $html_output .= $this->_getResultsRow(
-                $each_table, $newsearchsqls, $odd_row, $res_cnt
-            );
-            $odd_row = ! $odd_row;
+            // Separate rows with result and without result
+            if($res_cnt > 0) {
+				// Gets the result row's HTML for a table
+				$rows_with_result .= $this->_getResultsRow(
+					$each_table, $newsearchsqls, $odd_row_with_result, $res_cnt
+				);
+				$odd_row_with_result = ! $odd_row_with_result;
+			}else {
+				$odd_row_without_result = ! $odd_row_without_result;
+				$rows_without_result .= $this->_getResultsRow(
+					$each_table, $newsearchsqls, $odd_row_without_result, $res_cnt
+				);
+			}
         } // end for
-        $html_output .= '</table>';
+        // If there is a result build table structure
+        if($num_search_result_total > 0 ) {
+			$html_output .= '<thead>'
+                . '<tr><th>';  
+			$html_output .= sprintf(
+				_ngettext(
+					'<b>Total:</b> <i>%s</i> match',
+					'<b>Total:</b> <i>%s</i> matches',
+					$num_search_result_total
+				),
+				$num_search_result_total
+			);             
+			$html_output .= '</th><th>'
+				. __('Table')
+				. '</th><th colspan="2">'
+				. __('Action')
+				. '</th></tr>'
+				. '</thead>';
+			$html_output .= '<tbody>';
+			$html_output .= $rows_with_result;
+			// Display tables without result on the end
+			$html_output .= $rows_without_result;
+			$html_output .= '</tbody>';
+		}
+	    $html_output .= '</table>';
         // Displays total number of matches
         if (count($this->_criteriaTables) > 1) {
             $html_output .= '<p>';
